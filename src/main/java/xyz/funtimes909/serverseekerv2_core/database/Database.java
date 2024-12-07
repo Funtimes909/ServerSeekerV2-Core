@@ -1,6 +1,5 @@
 package xyz.funtimes909.serverseekerv2_core.database;
 
-import org.apache.commons.dbcp2.BasicDataSource;
 import xyz.funtimes909.serverseekerv2_core.records.Mod;
 import xyz.funtimes909.serverseekerv2_core.records.Player;
 import xyz.funtimes909.serverseekerv2_core.records.Server;
@@ -8,9 +7,8 @@ import xyz.funtimes909.serverseekerv2_core.records.Server;
 import java.sql.*;
 
 public class Database{
-    private static void init() {
-        Main.logger.info("Attempting to create database tables...");
-        try (Connection conn = getConnection()) {
+    private static void init() throws SQLException {
+        try (Connection conn = ConnectionPool.getConnection()) {
             Statement tables = conn.createStatement();
 
             // Servers
@@ -65,13 +63,11 @@ public class Database{
 
             tables.executeBatch();
             tables.close();
-        } catch (SQLException e) {
-            Main.logger.error("Failed to create database tables!", e);
         }
     }
 
-    public static void updateServer(Server server) {
-        try (Connection conn = getConnection()) {
+    public static void updateServer(Server server) throws SQLException {
+        try (Connection conn = ConnectionPool.getConnection()) {
             String address = server.getAddress();
             short port = server.getPort();
 
@@ -188,8 +184,6 @@ public class Database{
                 updateMods.executeBatch();
                 updateMods.close();
             }
-        } catch (SQLException e) {
-            Main.logger.error("There was an error during a database transaction!", e);
         }
     }
 }
