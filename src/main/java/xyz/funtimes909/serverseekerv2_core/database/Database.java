@@ -7,8 +7,8 @@ import xyz.funtimes909.serverseekerv2_core.records.Server;
 import java.sql.*;
 
 public class Database{
-    private static void init() throws SQLException {
-        try (Connection conn = ConnectionPool.getConnection()) {
+    private static void init(Connection conn) throws SQLException {
+        try (conn) {
             Statement tables = conn.createStatement();
 
             // Servers
@@ -66,8 +66,8 @@ public class Database{
         }
     }
 
-    public static void updateServer(Server server) throws SQLException {
-        try (Connection conn = ConnectionPool.getConnection()) {
+    public static void updateServer(Connection conn, Server server) throws SQLException {
+        try (conn) {
             String address = server.getAddress();
             short port = server.getPort();
 
