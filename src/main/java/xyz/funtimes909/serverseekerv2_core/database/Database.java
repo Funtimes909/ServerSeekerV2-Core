@@ -1,10 +1,18 @@
 package xyz.funtimes909.serverseekerv2_core.database;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import xyz.funtimes909.serverseekerv2_core.records.Mod;
 import xyz.funtimes909.serverseekerv2_core.records.Player;
 import xyz.funtimes909.serverseekerv2_core.records.Server;
+import xyz.funtimes909.serverseekerv2_core.types.ServerType;
+import xyz.funtimes909.serverseekerv2_core.util.HTTPUtils;
+import xyz.funtimes909.serverseekerv2_core.util.MotdUtils;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Database{
     private static void init(Connection conn) throws SQLException {
@@ -184,6 +192,122 @@ public class Database{
                 updateMods.executeBatch();
                 updateMods.close();
             }
+        }
+    }
+
+    public static Server buildServer(String address, short port, JsonObject parsedJson) {
+        try {
+            // Define variables as wrappers to allow null values
+            String version = null;
+            ServerType type = ServerType.JAVA;
+            StringBuilder motd = new StringBuilder();
+            String asn = null;
+            String country = null;
+            String hostname = null;
+            String organization = null;
+            Integer protocol = null;
+            Integer fmlNetworkVersion = null;
+            Integer maxPlayers = null;
+            Integer onlinePlayers = null;
+            List<Player> playerList = new ArrayList<>();
+            List<Mod> modsList = new ArrayList<>();
+            long timestamp = System.currentTimeMillis() / 1000;
+
+            // Neoforge
+            if (parsedJson.has("isModded")) {
+                type = ServerType.NEOFORGE;
+            }
+
+            String primaryResponse = HTTPUtils.run(address);
+            if (primaryResponse != null) {
+                JsonObject parsedPrimaryResponse = JsonParser.parseString(primaryResponse).getAsJsonObject();
+                if (parsedPrimaryResponse.has("reverse")) hostname = parsedPrimaryResponse.get("reverse").getAsString();
+                if (parsedPrimaryResponse.has("countryCode")) country = parsedPrimaryResponse.get("countryCode").getAsString();
+                if (parsedPrimaryResponse.has("org")) organization = parsedPrimaryResponse.get("org").getAsString();
+                if (parsedPrimaryResponse.has("as")) asn = parsedPrimaryResponse.get("as").getAsString();
+            }
+
+            // Minecraft server information
+            if (parsedJson.has("version")) {
+                version = parsedJson.get("version").getAsJsonObject().get("name").getAsString();
+                protocol = parsedJson.get("version").getAsJsonObject().get("protocol").getAsInt();
+
+                if (version.startsWith("Paper")) {
+                    type = ServerType.PAPER;
+                } else if (version.startsWith("Spigot")) {
+                    type = ServerType.SPIGOT;
+                } else if (version.contains("thermos")) {
+                    type = ServerType.THERMOS;
+                } else if (version.startsWith("CraftBukkit")) {
+                    type = ServerType.BUKKIT;
+                }
+            }
+
+            // Description can be either an object or a string
+            if (parsedJson.has("description")) {
+                if (parsedJson.get("description").isJsonObject()) {
+                    MotdUtils.buildMOTD(parsedJson.get("description").getAsJsonObject(), 10, motd);
+                } else {
+                    motd.append(parsedJson.get("description").getAsString());
+                }
+            }
+
+            // Forge servers send back information about mods
+            if (parsedJson.has("forgeData")) {
+                fmlNetworkVersion = parsedJson.get("forgeData").getAsJsonObject().get("fmlNetworkVersion").getAsInt();
+                type = ServerType.LEXFORGE;
+                if (parsedJson.get("forgeData").getAsJsonObject().has("mods")) {
+                    for (JsonElement mod : parsedJson.get("forgeData").getAsJsonObject().get("mods").getAsJsonArray().asList()) {
+                        String modid = mod.getAsJsonObject().get("modId").getAsString();
+                        String modmarker = mod.getAsJsonObject().get("modmarker").getAsString();
+
+                        modsList.add(new Mod(modid, modmarker));
+                    }
+                }
+            }
+
+            // Check for players
+            if (parsedJson.has("players")) {
+                maxPlayers = parsedJson.get("players").getAsJsonObject().get("max").getAsInt();
+                onlinePlayers = parsedJson.get("players").getAsJsonObject().get("online").getAsInt();
+                if (parsedJson.get("players").getAsJsonObject().has("sample")) {
+                    for (JsonElement playerJson : parsedJson.get("players").getAsJsonObject().get("sample").getAsJsonArray().asList()) {
+                        if (playerJson.getAsJsonObject().has("name") && playerJson.getAsJsonObject().has("id")) {
+                            String name = playerJson.getAsJsonObject().get("name").getAsString();
+                            String uuid = playerJson.getAsJsonObject().get("id").getAsString();
+
+                            playerList.add(new Player(name, uuid, timestamp, timestamp));
+                        }
+                    }
+                }
+            }
+
+            // Build server
+            return new Server.Builder()
+                    .setAddress(address)
+                    .setPort(port)
+                    .setServerType(type)
+                    .setFirstSeen(timestamp)
+                    .setLastSeen(timestamp)
+                    .setAsn(asn)
+                    .setCountry(country)
+                    .setReverseDns(hostname)
+                    .setOrganization(organization)
+                    .setVersion(version)
+                    .setProtocol(protocol)
+                    .setFmlNetworkVersion(fmlNetworkVersion)
+                    .setMotd(motd.toString())
+                    .setTimesSeen(1)
+                    .setIcon(parsedJson.has("favicon") ? parsedJson.get("favicon").getAsString() : null)
+                    .setPreventsReports(parsedJson.has("preventsChatReports") ? parsedJson.get("preventsChatReports").getAsBoolean() : null)
+                    .setEnforceSecure(parsedJson.has("enforcesSecureChat") ? parsedJson.get("enforcesSecureChat").getAsBoolean() : null)
+                    .setMaxPlayers(maxPlayers)
+                    .setOnlinePlayers(onlinePlayers)
+                    .setPlayers(playerList)
+                    .setMods(modsList)
+                    .build();
+        } catch (Exception ignored) {
+            return null;
         }
     }
 }
