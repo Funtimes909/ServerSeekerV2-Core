@@ -234,12 +234,24 @@ public class Database{
 
                 if (version.startsWith("Paper")) {
                     type = ServerType.PAPER;
+                } else if (version.startsWith("Velocity")) {
+                    type = ServerType.VELOCITY;
                 } else if (version.startsWith("Spigot")) {
                     type = ServerType.SPIGOT;
                 } else if (version.contains("thermos")) {
                     type = ServerType.THERMOS;
                 } else if (version.startsWith("CraftBukkit")) {
                     type = ServerType.BUKKIT;
+                } else if (version.startsWith("Pufferfish")) {
+                    type = ServerType.PUFFERFISH;
+                } else if (version.startsWith("Purpur")) {
+                    type = ServerType.PURPUR;
+                } else if (version.startsWith("Waterfall")) {
+                    type = ServerType.WATERFALL;
+                } else if (version.startsWith("BungeeCord")) {
+                    type = ServerType.BUNGEECORD;
+                } else if (version.startsWith("Leaves")) {
+                    type = ServerType.LEAVES;
                 }
             }
 

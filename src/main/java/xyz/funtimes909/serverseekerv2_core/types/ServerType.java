@@ -7,6 +7,12 @@ public enum ServerType {
     LEXFORGE,
     PAPER,
     SPIGOT,
+    PURPUR,
+    PUFFERFISH,
+    VELOCITY,
+    LEAVES,
+    WATERFALL,
+    BUNGEECORD,
     BUKKIT,
     THERMOS,
     LEGACY
