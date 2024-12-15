@@ -21,5 +21,5 @@ public enum ServerType {
         this.versionName = versionName;
     }
 
-    private String versionName;
+    public final String versionName;
 }
