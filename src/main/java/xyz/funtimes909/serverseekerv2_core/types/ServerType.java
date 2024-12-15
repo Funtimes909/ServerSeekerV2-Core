@@ -1,19 +1,25 @@
 package xyz.funtimes909.serverseekerv2_core.types;
 
 public enum ServerType {
-    JAVA,
-    BEDROCK,
-    NEOFORGE,
-    LEXFORGE,
-    PAPER,
-    SPIGOT,
-    PURPUR,
-    PUFFERFISH,
-    VELOCITY,
-    LEAVES,
-    WATERFALL,
-    BUNGEECORD,
-    BUKKIT,
-    THERMOS,
-    LEGACY
+    JAVA("Java"),
+    BEDROCK("Bedrock"),
+    NEOFORGE("Neoforge"),
+    LEXFORGE("Neoforge"),
+    PAPER("Paper"),
+    SPIGOT("Spigot"),
+    PURPUR("Purpur"),
+    PUFFERFISH("Pufferfish"),
+    VELOCITY("Velocity"),
+    LEAVES("Leaves"),
+    WATERFALL("Waterfall"),
+    BUNGEECORD("BungeeCord"),
+    BUKKIT("CraftBukkit"),
+    THERMOS("thermos"),
+    LEGACY("Legacy");
+
+    ServerType(String versionName) {
+        this.versionName = versionName;
+    }
+
+    private String versionName;
 }

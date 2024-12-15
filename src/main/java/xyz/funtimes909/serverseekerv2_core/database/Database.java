@@ -213,18 +213,30 @@ public class Database{
             List<Mod> modsList = new ArrayList<>();
             long timestamp = System.currentTimeMillis() / 1000;
 
-            // Neoforge
+            // Neo forge
             if (parsedJson.has("isModded")) {
                 type = ServerType.NEOFORGE;
             }
 
-            String primaryResponse = HTTPUtils.run(address);
-            if (primaryResponse != null) {
-                JsonObject parsedPrimaryResponse = JsonParser.parseString(primaryResponse).getAsJsonObject();
-                if (parsedPrimaryResponse.has("reverse")) hostname = parsedPrimaryResponse.get("reverse").getAsString();
-                if (parsedPrimaryResponse.has("countryCode")) country = parsedPrimaryResponse.get("countryCode").getAsString();
-                if (parsedPrimaryResponse.has("org")) organization = parsedPrimaryResponse.get("org").getAsString();
-                if (parsedPrimaryResponse.has("as")) asn = parsedPrimaryResponse.get("as").getAsString();
+            String response = HTTPUtils.run(address);
+            if (response != null) {
+                JsonObject parsed = JsonParser.parseString(response).getAsJsonObject();
+
+                if (!parsed.get("countryCode").getAsString().isBlank()) {
+                    country = parsed.get("countryCode").getAsString();
+                }
+
+                if (!parsed.get("reverse").getAsString().isBlank()) {
+                    hostname = parsed.get("reverse").getAsString();
+                }
+
+                if (!parsed.get("org").getAsString().isBlank()) {
+                    organization = parsed.get("org").getAsString();
+                }
+
+                if (!parsed.get("as").getAsString().isBlank()) {
+                    asn = parsed.get("as").getAsString();
+                }
             }
 
             // Minecraft server information
