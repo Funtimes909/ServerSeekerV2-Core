@@ -7,19 +7,20 @@ public enum ServerType {
     LEXFORGE("Neoforge"),
     PAPER("Paper"),
     SPIGOT("Spigot"),
+    BUKKIT("CraftBukkit"),
     PURPUR("Purpur"),
+    FOLIA("Folia"),
     PUFFERFISH("Pufferfish"),
     VELOCITY("Velocity"),
     LEAVES("Leaves"),
     WATERFALL("Waterfall"),
     BUNGEECORD("BungeeCord"),
-    BUKKIT("CraftBukkit"),
-    THERMOS("thermos"),
-    LEGACY("Legacy");
+    LEGACY("Legacy"),
+    ANY("Any");
+
+    public final String versionName;
 
     ServerType(String versionName) {
         this.versionName = versionName;
     }
-
-    public final String versionName;
 }

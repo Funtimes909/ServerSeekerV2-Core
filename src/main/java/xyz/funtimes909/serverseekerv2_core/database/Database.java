@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import xyz.funtimes909.serverseekerv2_core.records.Mod;
 import xyz.funtimes909.serverseekerv2_core.records.Player;
 import xyz.funtimes909.serverseekerv2_core.records.Server;
+import xyz.funtimes909.serverseekerv2_core.records.Version;
 import xyz.funtimes909.serverseekerv2_core.types.ServerType;
 import xyz.funtimes909.serverseekerv2_core.util.HTTPUtils;
 import xyz.funtimes909.serverseekerv2_core.util.MotdUtils;
@@ -197,10 +198,7 @@ public class Database{
 
     public static Server buildServer(String address, short port, JsonObject parsedJson) {
         try {
-            // Define variables as wrappers to allow null values
             String version = null;
-            ServerType type = ServerType.JAVA;
-            StringBuilder motd = new StringBuilder();
             String asn = null;
             String country = null;
             String hostname = null;
@@ -209,14 +207,11 @@ public class Database{
             Integer fmlNetworkVersion = null;
             Integer maxPlayers = null;
             Integer onlinePlayers = null;
+            ServerType type = null;
+            StringBuilder motd = new StringBuilder();
             List<Player> playerList = new ArrayList<>();
             List<Mod> modsList = new ArrayList<>();
             long timestamp = System.currentTimeMillis() / 1000;
-
-            // Neo forge
-            if (parsedJson.has("isModded")) {
-                type = ServerType.NEOFORGE;
-            }
 
             String response = HTTPUtils.run(address);
             if (response != null) {
@@ -239,32 +234,12 @@ public class Database{
                 }
             }
 
-            // Minecraft server information
             if (parsedJson.has("version")) {
-                version = parsedJson.get("version").getAsJsonObject().get("name").getAsString();
-                protocol = parsedJson.get("version").getAsJsonObject().get("protocol").getAsInt();
+                Version record = getServerType(parsedJson);
 
-                if (version.startsWith("Paper")) {
-                    type = ServerType.PAPER;
-                } else if (version.startsWith("Velocity")) {
-                    type = ServerType.VELOCITY;
-                } else if (version.startsWith("Spigot")) {
-                    type = ServerType.SPIGOT;
-                } else if (version.contains("thermos")) {
-                    type = ServerType.THERMOS;
-                } else if (version.startsWith("CraftBukkit")) {
-                    type = ServerType.BUKKIT;
-                } else if (version.startsWith("Pufferfish")) {
-                    type = ServerType.PUFFERFISH;
-                } else if (version.startsWith("Purpur")) {
-                    type = ServerType.PURPUR;
-                } else if (version.startsWith("Waterfall")) {
-                    type = ServerType.WATERFALL;
-                } else if (version.startsWith("BungeeCord")) {
-                    type = ServerType.BUNGEECORD;
-                } else if (version.startsWith("Leaves")) {
-                    type = ServerType.LEAVES;
-                }
+                type = record.type();
+                version = record.version();
+                protocol = record.protocol();
             }
 
             // Description can be either an object or a string
@@ -276,32 +251,32 @@ public class Database{
                 }
             }
 
-            // Forge servers send back information about mods
+            // Handle Forge servers
             if (parsedJson.has("forgeData")) {
                 fmlNetworkVersion = parsedJson.get("forgeData").getAsJsonObject().get("fmlNetworkVersion").getAsInt();
                 type = ServerType.LEXFORGE;
                 if (parsedJson.get("forgeData").getAsJsonObject().has("mods")) {
                     for (JsonElement mod : parsedJson.get("forgeData").getAsJsonObject().get("mods").getAsJsonArray().asList()) {
-                        String modid = mod.getAsJsonObject().get("modId").getAsString();
-                        String modmarker = mod.getAsJsonObject().get("modmarker").getAsString();
-
-                        modsList.add(new Mod(modid, modmarker));
+                        modsList.add(new Mod(
+                                mod.getAsJsonObject().get("modId").getAsString(),
+                                mod.getAsJsonObject().get("modmarker").getAsString()
+                        ));
                     }
                 }
             }
 
-            // Check for players
+            // Handle players
             if (parsedJson.has("players")) {
                 maxPlayers = parsedJson.get("players").getAsJsonObject().get("max").getAsInt();
                 onlinePlayers = parsedJson.get("players").getAsJsonObject().get("online").getAsInt();
                 if (parsedJson.get("players").getAsJsonObject().has("sample")) {
                     for (JsonElement playerJson : parsedJson.get("players").getAsJsonObject().get("sample").getAsJsonArray().asList()) {
-                        if (playerJson.getAsJsonObject().has("name") && playerJson.getAsJsonObject().has("id")) {
-                            String name = playerJson.getAsJsonObject().get("name").getAsString();
-                            String uuid = playerJson.getAsJsonObject().get("id").getAsString();
-
-                            playerList.add(new Player(name, uuid, timestamp, timestamp));
-                        }
+                        playerList.add(new Player(
+                                playerJson.getAsJsonObject().get("name").getAsString(),
+                                playerJson.getAsJsonObject().get("id").getAsString(),
+                                timestamp,
+                                timestamp
+                        ));
                     }
                 }
             }
@@ -333,5 +308,42 @@ public class Database{
         } catch (Exception ignored) {
             return null;
         }
+    }
+
+    public static Version getServerType(JsonObject parsedJson) {
+        JsonObject object = parsedJson.get("version").getAsJsonObject();
+        String version = object.get("version").getAsString();
+        int protocol = object.get("protocol").getAsInt();
+        ServerType type = ServerType.JAVA;
+
+        if (parsedJson.has("isModded")) {
+            type = ServerType.NEOFORGE;
+            return new Version(version, protocol, type);
+        } else if (parsedJson.has("forgeData")) {
+            type = ServerType.LEXFORGE;
+            return new Version(version, protocol, type);
+        }
+
+        if (!Character.isDigit(version.charAt(0))) {
+            type = switch (version.split(" ")[0]) {
+                case "Paper" -> ServerType.PAPER;
+                case "Velocity" -> ServerType.VELOCITY;
+                case "BungeeCord" -> ServerType.BUNGEECORD;
+                case "Spigot" -> ServerType.SPIGOT;
+                case "CraftBukkit" -> ServerType.BUKKIT;
+                case "Folia" -> ServerType.FOLIA;
+                case "Pufferfish" -> ServerType.PUFFERFISH;
+                case "Purpur" -> ServerType.PURPUR;
+                case "Waterfall" -> ServerType.WATERFALL;
+                case "Leaves" -> ServerType.LEAVES;
+                default -> ServerType.JAVA;
+            };
+        }
+
+        return new Version(
+                version,
+                protocol,
+                type
+        );
     }
 }
