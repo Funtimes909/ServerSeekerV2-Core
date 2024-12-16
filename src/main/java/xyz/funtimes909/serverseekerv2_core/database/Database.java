@@ -312,7 +312,7 @@ public class Database{
 
     public static Version getServerType(JsonObject parsedJson) {
         JsonObject object = parsedJson.get("version").getAsJsonObject();
-        String version = object.get("version").getAsString();
+        String version = object.get("name").getAsString();
         int protocol = object.get("protocol").getAsInt();
         ServerType type = ServerType.JAVA;
 
